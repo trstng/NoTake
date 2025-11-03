@@ -63,7 +63,7 @@ export function LoginForm() {
 
   if (magicLinkSent) {
     return (
-      <Card className="border-neon-primary/30">
+      <Card className="border-primary/30">
         <CardHeader>
           <CardTitle>Check your email</CardTitle>
           <CardDescription>
@@ -84,7 +84,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="border-neon-primary/30">
+    <Card className="border-primary/30">
       <CardHeader>
         <CardTitle>Sign In</CardTitle>
         <CardDescription>
@@ -115,7 +115,7 @@ export function LoginForm() {
           </div>
 
           {error && (
-            <p className="text-sm text-neon-loss">{error}</p>
+            <p className="text-sm text-destructive">{error}</p>
           )}
 
           <div className="flex flex-col gap-2">

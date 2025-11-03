@@ -2,37 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Clean modern design system - all colors in HSL format */
+
 @layer base {
   :root {
-    --background: 210 100% 4%;
-    --foreground: 210 20% 90%;
+    --background: 220 20% 98%;
+    --foreground: 220 15% 20%;
 
-    --card: 210 100% 7%;
-    --card-foreground: 210 20% 90%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 20%;
 
-    --popover: 210 100% 7%;
-    --popover-foreground: 210 20% 90%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 20%;
 
-    --primary: 162 100% 50%;
-    --primary-foreground: 210 100% 4%;
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 100% 7%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary: 220 15% 95%;
+    --secondary-foreground: 220 15% 30%;
 
-    --muted: 210 100% 7%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 15% 96%;
+    --muted-foreground: 220 10% 50%;
 
-    --accent: 48 100% 58%;
-    --accent-foreground: 210 100% 4%;
+    --accent: 211 100% 96%;
+    --accent-foreground: 211 100% 50%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 20% 90%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 210 50% 15%;
-    --input: 210 50% 15%;
-    --ring: 162 100% 50%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
 
-    --radius: 0.5rem;
+    --border: 220 15% 92%;
+    --input: 220 15% 92%;
+    --ring: 211 100% 50%;
+
+    --radius: 1rem;
+
+    --gradient-subtle: linear-gradient(180deg, hsl(220 20% 99%) 0%, hsl(220 20% 98%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100% / 0.9) 0%, hsl(0 0% 100% / 0.6) 100%);
+
+    --shadow-soft: 0 2px 8px -2px hsl(220 15% 20% / 0.08), 0 4px 16px -4px hsl(220 15% 20% / 0.04);
+    --shadow-medium: 0 4px 16px -4px hsl(220 15% 20% / 0.1), 0 8px 32px -8px hsl(220 15% 20% / 0.08);
+    --shadow-large: 0 8px 32px -8px hsl(220 15% 20% / 0.12), 0 16px 64px -16px hsl(220 15% 20% / 0.1);
+
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 15% 10%;
+    --foreground: 220 15% 95%;
+
+    --card: 220 15% 12%;
+    --card-foreground: 220 15% 95%;
+
+    --popover: 220 15% 12%;
+    --popover-foreground: 220 15% 95%;
+
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 220 15% 90%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 211 100% 20%;
+    --accent-foreground: 211 100% 70%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 211 100% 50%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -40,39 +105,29 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
 @layer utilities {
-  .text-gradient-neon {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-primary to-neon-accent;
-  }
-
-  .border-neon-glow {
-    box-shadow: 0 0 5px #00FFAA;
-  }
-
-  .border-neon-glow-strong {
-    box-shadow: 0 0 10px #00FFAA, 0 0 20px #00FFAA;
-  }
-
   .scrollbar-thin::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-surface;
+    @apply bg-muted;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-neon-primary/20 rounded-full;
+    @apply bg-primary/20 rounded-full;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    @apply bg-neon-primary/40;
+    @apply bg-primary/40;
   }
 }

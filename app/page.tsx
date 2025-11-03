@@ -10,7 +10,7 @@ export default function Home() {
       <section className="min-h-screen flex items-center justify-center px-4">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <div className="space-y-4">
-            <h1 className="text-7xl font-bold text-gradient-neon animate-glow-pulse">
+            <h1 className="text-7xl font-bold text-foreground animate-glow-pulse">
               NoTake
             </h1>
             <p className="text-2xl text-foreground">
@@ -37,9 +37,9 @@ export default function Home() {
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-16">
-            <Card className="border-neon-primary/30">
+            <Card className="border-primary/30">
               <CardContent className="pt-6 text-center">
-                <TrendingUp className="h-8 w-8 text-neon-primary mx-auto mb-3" />
+                <TrendingUp className="h-8 w-8 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-2">Equity Curves</h3>
                 <p className="text-sm text-muted-foreground">
                   Visualize your P&L over time
@@ -47,9 +47,9 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-neon-primary/30">
+            <Card className="border-primary/30">
               <CardContent className="pt-6 text-center">
-                <BarChart3 className="h-8 w-8 text-neon-primary mx-auto mb-3" />
+                <BarChart3 className="h-8 w-8 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-2">Deep Analytics</h3>
                 <p className="text-sm text-muted-foreground">
                   Per-market, tag, and strategy analysis
@@ -57,9 +57,9 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-neon-primary/30">
+            <Card className="border-primary/30">
               <CardContent className="pt-6 text-center">
-                <DollarSign className="h-8 w-8 text-neon-primary mx-auto mb-3" />
+                <DollarSign className="h-8 w-8 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-2">P&L Tracking</h3>
                 <p className="text-sm text-muted-foreground">
                   Realized and unrealized profits
@@ -67,9 +67,9 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-neon-primary/30">
+            <Card className="border-primary/30">
               <CardContent className="pt-6 text-center">
-                <Zap className="h-8 w-8 text-neon-primary mx-auto mb-3" />
+                <Zap className="h-8 w-8 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-2">Real-time Updates</h3>
                 <p className="text-sm text-muted-foreground">
                   Live trade tracking and notifications
@@ -78,8 +78,8 @@ export default function Home() {
             </Card>
           </div>
 
-          <div className="mt-12 p-6 bg-surface border border-neon-primary/30 rounded-lg text-left max-w-2xl mx-auto">
-            <h3 className="text-sm font-semibold text-neon-primary mb-2">
+          <div className="mt-12 p-6 bg-surface border border-primary/30 rounded-lg text-left max-w-2xl mx-auto">
+            <h3 className="text-sm font-semibold text-primary mb-2">
               PLATFORM SUPPORT
             </h3>
             <p className="text-sm text-muted-foreground">

@@ -18,46 +18,42 @@ const config: Config = {
     },
     extend: {
       colors: {
-        // Neon Terminal Theme
-        neon: {
-          primary: '#00FFAA',
-          accent: '#FFD500',
-          profit: '#39FF14',
-          loss: '#FF3131',
-        },
-        background: '#000B14',
-        surface: '#001122',
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        foreground: '#E2E8F0',
-        muted: {
-          DEFAULT: '#001122',
-          foreground: '#64748B',
-        },
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         primary: {
-          DEFAULT: '#00FFAA',
-          foreground: '#000B14',
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
-          DEFAULT: '#001122',
-          foreground: '#E2E8F0',
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
         },
         destructive: {
-          DEFAULT: '#FF3131',
-          foreground: '#E2E8F0',
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT: '#FFD500',
-          foreground: '#000B14',
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
         },
         popover: {
-          DEFAULT: '#001122',
-          foreground: '#E2E8F0',
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
         },
         card: {
-          DEFAULT: '#001122',
-          foreground: '#E2E8F0',
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
         },
       },
       borderRadius: {
@@ -74,22 +70,10 @@ const config: Config = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
-        'glow-pulse': {
-          '0%, 100%': {
-            boxShadow: '0 0 5px #00FFAA, 0 0 10px #00FFAA',
-          },
-          '50%': {
-            boxShadow: '0 0 10px #00FFAA, 0 0 20px #00FFAA, 0 0 30px #00FFAA',
-          },
-        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
-      },
-      fontFamily: {
-        mono: ['var(--font-mono)', 'monospace'],
       },
     },
   },

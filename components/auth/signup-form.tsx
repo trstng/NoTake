@@ -46,7 +46,7 @@ export function SignupForm() {
 
   if (success) {
     return (
-      <Card className="border-neon-primary/30">
+      <Card className="border-primary/30">
         <CardHeader>
           <CardTitle>Check your email</CardTitle>
           <CardDescription>
@@ -67,7 +67,7 @@ export function SignupForm() {
   }
 
   return (
-    <Card className="border-neon-primary/30">
+    <Card className="border-primary/30">
       <CardHeader>
         <CardTitle>Create Account</CardTitle>
         <CardDescription>
@@ -109,7 +109,7 @@ export function SignupForm() {
           </div>
 
           {error && (
-            <p className="text-sm text-neon-loss">{error}</p>
+            <p className="text-sm text-destructive">{error}</p>
           )}
 
           <Button type="submit" disabled={loading} className="w-full">

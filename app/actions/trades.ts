@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { TradeInsert } from '@/lib/database.types'
+import { calculatePositions } from './positions'
+import { updateDailyStats } from './stats'
 
 interface KalshiCSVRow {
   type: string
@@ -21,6 +23,7 @@ interface ImportResult {
   count?: number
   error?: string
   duplicates?: number
+  message?: string
 }
 
 export async function importTrades(csvRows: KalshiCSVRow[]): Promise<ImportResult> {
@@ -119,10 +122,31 @@ export async function importTrades(csvRows: KalshiCSVRow[]): Promise<ImportResul
       }
     }
 
+    // Calculate positions after successful import
+    const positionResult = await calculatePositions(user.id)
+
+    // Update daily stats after positions are calculated (with $0 starting capital)
+    const statsResult = await updateDailyStats(user.id, 0)
+
+    let message = `Imported ${insertedCount} trade${insertedCount !== 1 ? 's' : ''}`
+    if (trades.length - newTrades.length > 0) {
+      message += ` (${trades.length - newTrades.length} duplicate${trades.length - newTrades.length !== 1 ? 's' : ''} skipped)`
+    }
+    if (positionResult.success && positionResult.count && positionResult.count > 0) {
+      message += `. Calculated ${positionResult.count} position${positionResult.count !== 1 ? 's' : ''}`
+      if (positionResult.totalPnL !== undefined) {
+        message += ` with ${positionResult.totalPnL >= 0 ? '+' : ''}$${positionResult.totalPnL.toFixed(2)} P&L`
+      }
+    }
+    if (statsResult.success && statsResult.count && statsResult.count > 0) {
+      message += `. Updated ${statsResult.count} day${statsResult.count !== 1 ? 's' : ''} of stats`
+    }
+
     return {
       success: true,
       count: insertedCount,
       duplicates: trades.length - newTrades.length,
+      message,
     }
   } catch (err: any) {
     console.error('Import error:', err)

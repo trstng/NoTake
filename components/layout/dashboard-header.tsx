@@ -7,6 +7,7 @@ import { LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { CSVImportDialog } from '@/components/import/csv-import-dialog'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 interface DashboardHeaderProps {
   user: User
@@ -25,7 +26,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   }
 
   return (
-    <header className="h-16 border-b border-border bg-surface flex items-center justify-between px-6">
+    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
         <div>
           <p className="text-sm text-muted-foreground">Welcome back,</p>
@@ -35,6 +36,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
       <div className="flex items-center gap-2">
         <CSVImportDialog />
+        <ThemeToggle />
         <Button
           variant="ghost"
           size="sm"

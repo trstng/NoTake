@@ -43,11 +43,11 @@ export function DashboardNav() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 bg-surface border-r border-border flex flex-col">
+    <aside className="w-64 bg-card border-r border-border flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-border">
         <Link href="/dashboard" className="block">
-          <h1 className="text-2xl font-bold text-gradient-neon">
+          <h1 className="text-2xl font-bold text-foreground">
             NoTake
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
@@ -69,8 +69,8 @@ export function DashboardNav() {
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all',
                 isActive
-                  ? 'bg-neon-primary/10 text-neon-primary border border-neon-primary/30'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-neon-primary/5'
+                  ? 'bg-primary/10 text-primary border border-primary/30'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
               )}
             >
               <item.icon className="h-5 w-5" />

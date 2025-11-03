@@ -133,10 +133,7 @@ export function CSVImportDialog() {
           }
 
           // Show success message
-          let message = `Successfully imported ${result.count} trade${result.count !== 1 ? 's' : ''}`
-          if (result.duplicates && result.duplicates > 0) {
-            message += ` (${result.duplicates} duplicate${result.duplicates !== 1 ? 's' : ''} skipped)`
-          }
+          const message = result.message || `Successfully imported ${result.count} trade${result.count !== 1 ? 's' : ''}`
           setSuccessMessage(message)
           setSuccess(true)
           setImporting(false)
@@ -183,7 +180,7 @@ export function CSVImportDialog() {
 
         <div className="space-y-4">
           {/* File Upload */}
-          <Card className="border-dashed border-2 border-neon-primary/30">
+          <Card className="border-dashed border-2 border-primary/30">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center gap-2">
                 <FileText className="h-10 w-10 text-muted-foreground" />
@@ -229,7 +226,7 @@ export function CSVImportDialog() {
                     <tbody>
                       {preview.map((row, i) => (
                         <tr key={i} className="border-b border-border/50">
-                          <td className="p-2 font-mono text-[10px]">
+                          <td className="p-2 text-[10px]">
                             {new Date(row.timestamp).toLocaleDateString()}
                           </td>
                           <td className="p-2 truncate max-w-[200px]">
@@ -239,8 +236,8 @@ export function CSVImportDialog() {
                             <span
                               className={
                                 row.direction === 'Yes'
-                                  ? 'text-neon-profit font-medium'
-                                  : 'text-neon-loss font-medium'
+                                  ? 'text-success font-medium'
+                                  : 'text-destructive font-medium'
                               }
                             >
                               {row.direction}
@@ -263,17 +260,17 @@ export function CSVImportDialog() {
 
           {/* Error Message */}
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-neon-loss/10 border border-neon-loss/30 rounded-lg">
-              <AlertCircle className="h-4 w-4 text-neon-loss flex-shrink-0" />
-              <p className="text-sm text-neon-loss">{error}</p>
+            <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
 
           {/* Success Message */}
           {success && (
-            <div className="flex items-center gap-2 p-3 bg-neon-profit/10 border border-neon-profit/30 rounded-lg">
-              <CheckCircle2 className="h-4 w-4 text-neon-profit flex-shrink-0" />
-              <p className="text-sm text-neon-profit">
+            <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-lg">
+              <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
+              <p className="text-sm text-success">
                 {successMessage || 'Trades imported successfully!'}
               </p>
             </div>
