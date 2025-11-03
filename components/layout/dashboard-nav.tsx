@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
@@ -47,12 +48,14 @@ export function DashboardNav() {
       {/* Logo */}
       <div className="p-6 border-b border-border">
         <Link href="/dashboard" className="block">
-          <h1 className="text-2xl font-bold text-foreground">
-            NoTake
-          </h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Prediction Analytics
-          </p>
+          <Image
+            src="/logo.png"
+            alt="NoTake Logo"
+            width={220}
+            height={80}
+            priority
+            className="w-full h-auto"
+          />
         </Link>
       </div>
 
