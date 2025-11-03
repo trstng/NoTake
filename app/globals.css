@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 100% 4%;
+    --foreground: 210 20% 90%;
+
+    --card: 210 100% 7%;
+    --card-foreground: 210 20% 90%;
+
+    --popover: 210 100% 7%;
+    --popover-foreground: 210 20% 90%;
+
+    --primary: 162 100% 50%;
+    --primary-foreground: 210 100% 4%;
+
+    --secondary: 210 100% 7%;
+    --secondary-foreground: 210 20% 90%;
+
+    --muted: 210 100% 7%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 48 100% 58%;
+    --accent-foreground: 210 100% 4%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 20% 90%;
+
+    --border: 210 50% 15%;
+    --input: 210 50% 15%;
+    --ring: 162 100% 50%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .text-gradient-neon {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-primary to-neon-accent;
+  }
+
+  .border-neon-glow {
+    box-shadow: 0 0 5px #00FFAA;
+  }
+
+  .border-neon-glow-strong {
+    box-shadow: 0 0 10px #00FFAA, 0 0 20px #00FFAA;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-surface;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-neon-primary/20 rounded-full;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-neon-primary/40;
+  }
+}
