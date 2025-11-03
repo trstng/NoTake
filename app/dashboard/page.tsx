@@ -2,19 +2,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/lib/supabase/server'
 import { formatCurrency } from '@/lib/utils'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   // Fetch user's trade stats
-  const { data: trades } = await supabase
+  const { data: trades, count: totalTradeCount } = await supabase
     .from('trades')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('user_id', user?.id)
     .order('timestamp', { ascending: false })
     .limit(10)
 
-  const tradeCount = trades?.length || 0
+  const tradeCount = totalTradeCount || 0
+
+  // Calculate total volume
+  const totalVolume = trades?.reduce((sum, trade) => {
+    return sum + (trade.amount_contracts * trade.price_cents / 100)
+  }, 0) || 0
 
   return (
     <div className="space-y-6">
@@ -62,7 +70,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-xs text-muted-foreground">
-              Across all markets
+              {formatCurrency(totalVolume)} volume
             </p>
           </CardContent>
         </Card>
@@ -117,22 +125,33 @@ export default async function DashboardPage() {
               {trades?.map((trade) => (
                 <div
                   key={trade.id}
-                  className="flex items-center justify-between p-3 border border-border rounded-lg"
+                  className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-neon-primary/5 transition-colors"
                 >
-                  <div>
-                    <p className="font-medium">{trade.market_ticker}</p>
+                  <div className="flex-1">
+                    <p className="font-medium truncate">{trade.market_ticker}</p>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(trade.timestamp).toLocaleDateString()}
+                      {new Date(trade.timestamp).toLocaleDateString()} • {new Date(trade.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      {trade.side === 'buy' ? 'BUY' : 'SELL'}
+                  <div className="text-right ml-4">
+                    <p className={`font-medium ${trade.direction === 'Yes' ? 'text-neon-profit' : 'text-neon-loss'}`}>
+                      {trade.direction.toUpperCase()}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {trade.size} @ ${trade.price}
+                    <p className="text-sm text-muted-foreground font-mono">
+                      {trade.amount_contracts} @ {trade.price_cents}¢
                     </p>
                   </div>
+                  {trade.order_type && (
+                    <div className="ml-3">
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        trade.order_type === 'Maker'
+                          ? 'bg-neon-primary/10 text-neon-primary'
+                          : 'bg-neon-accent/10 text-neon-accent'
+                      }`}>
+                        {trade.order_type}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -13,6 +13,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { importTrades } from '@/app/actions/trades'
+import { useRouter } from 'next/navigation'
 
 // Kalshi CSV format
 interface KalshiCSVRow {
@@ -38,11 +40,13 @@ interface TradePreview {
 }
 
 export function CSVImportDialog() {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string>('')
   const [preview, setPreview] = useState<TradePreview[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -108,34 +112,46 @@ export function CSVImportDialog() {
         complete: async (results) => {
           const rows = results.data as KalshiCSVRow[]
 
-          // Parse and validate all rows
-          const validTrades = rows
-            .map(parseKalshiRow)
-            .filter((row): row is TradePreview => row !== null)
+          // Filter out empty rows
+          const validRows = rows.filter(
+            (row) => row.Market_Ticker && row.Original_Date && row.Direction
+          )
 
-          if (validTrades.length === 0) {
+          if (validRows.length === 0) {
             setError('No valid trades found in CSV')
             setImporting(false)
             return
           }
 
-          // TODO: Call server action to import trades
-          // const result = await importTrades(validTrades)
-          console.log('Parsed trades:', validTrades)
-          console.log(`Total: ${validTrades.length} valid trades`)
+          // Call server action to import trades
+          const result = await importTrades(validRows)
 
-          // For now, simulate import
-          await new Promise((resolve) => setTimeout(resolve, 2000))
+          if (!result.success) {
+            setError(result.error || 'Import failed')
+            setImporting(false)
+            return
+          }
 
+          // Show success message
+          let message = `Successfully imported ${result.count} trade${result.count !== 1 ? 's' : ''}`
+          if (result.duplicates && result.duplicates > 0) {
+            message += ` (${result.duplicates} duplicate${result.duplicates !== 1 ? 's' : ''} skipped)`
+          }
+          setSuccessMessage(message)
           setSuccess(true)
           setImporting(false)
 
+          // Refresh the page to show new trades
+          router.refresh()
+
+          // Close dialog after showing success
           setTimeout(() => {
             setOpen(false)
             setFile(null)
             setPreview([])
             setSuccess(false)
-          }, 2000)
+            setSuccessMessage('')
+          }, 3000)
         },
         error: (err) => {
           setError(`Import failed: ${err.message}`)
@@ -256,9 +272,9 @@ export function CSVImportDialog() {
           {/* Success Message */}
           {success && (
             <div className="flex items-center gap-2 p-3 bg-neon-profit/10 border border-neon-profit/30 rounded-lg">
-              <CheckCircle2 className="h-4 w-4 text-neon-profit" />
+              <CheckCircle2 className="h-4 w-4 text-neon-profit flex-shrink-0" />
               <p className="text-sm text-neon-profit">
-                Trades imported successfully!
+                {successMessage || 'Trades imported successfully!'}
               </p>
             </div>
           )}
