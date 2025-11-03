@@ -278,3 +278,54 @@ export function calculateMonthlyReturns(dailyStats: DailyStat[]): Map<string, nu
 
   return monthlyReturns
 }
+
+/**
+ * Calculate average hold time for closed positions
+ * Returns object with hours and formatted string
+ */
+export function calculateAverageHoldTime(positions: Position[]): {
+  hours: number
+  days: number
+  formatted: string
+} {
+  if (positions.length === 0) {
+    return {
+      hours: 0,
+      days: 0,
+      formatted: '0 hours',
+    }
+  }
+
+  const holdTimes = positions
+    .filter((p) => p.entry_time && p.exit_time)
+    .map((p) => p.exit_time! - p.entry_time!)
+
+  if (holdTimes.length === 0) {
+    return {
+      hours: 0,
+      days: 0,
+      formatted: '0 hours',
+    }
+  }
+
+  const avgMilliseconds = holdTimes.reduce((sum, time) => sum + time, 0) / holdTimes.length
+  const avgHours = avgMilliseconds / (1000 * 60 * 60)
+  const avgDays = avgHours / 24
+
+  // Format as human-readable string
+  let formatted: string
+  if (avgDays >= 1) {
+    formatted = `${avgDays.toFixed(1)} day${avgDays >= 2 ? 's' : ''}`
+  } else if (avgHours >= 1) {
+    formatted = `${avgHours.toFixed(1)} hour${avgHours >= 2 ? 's' : ''}`
+  } else {
+    const avgMinutes = avgMilliseconds / (1000 * 60)
+    formatted = `${avgMinutes.toFixed(0)} minute${avgMinutes >= 2 ? 's' : ''}`
+  }
+
+  return {
+    hours: Math.round(avgHours * 100) / 100,
+    days: Math.round(avgDays * 100) / 100,
+    formatted,
+  }
+}

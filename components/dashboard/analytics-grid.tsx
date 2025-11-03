@@ -1,3 +1,5 @@
+'use client'
+
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -32,18 +34,18 @@ export const AnalyticsGrid = () => {
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={mfeData}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-            <XAxis 
-              dataKey="range" 
+            <XAxis
+              dataKey="range"
               stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
             />
-            <YAxis 
+            <YAxis
               stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
             />
-            <Tooltip 
+            <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
@@ -65,18 +67,18 @@ export const AnalyticsGrid = () => {
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={maeData}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-            <XAxis 
-              dataKey="range" 
+            <XAxis
+              dataKey="range"
               stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
             />
-            <YAxis 
+            <YAxis
               stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
             />
-            <Tooltip 
+            <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
@@ -98,20 +100,20 @@ export const AnalyticsGrid = () => {
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={winLossData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-            <XAxis 
+            <XAxis
               type="number"
               stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
             />
-            <YAxis 
+            <YAxis
               type="category"
               dataKey="type"
               stroke="hsl(var(--muted-foreground))"
               fontSize={12}
               tickLine={false}
             />
-            <Tooltip 
+            <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
