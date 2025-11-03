@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { TrendingUp, BarChart3, DollarSign, Zap } from 'lucide-react'
@@ -10,9 +11,16 @@ export default function Home() {
       <section className="min-h-screen flex items-center justify-center px-4">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <div className="space-y-4">
-            <h1 className="text-7xl font-bold text-foreground animate-glow-pulse">
-              NoTake
-            </h1>
+            <div className="flex justify-center mb-6">
+              <Image
+                src="/logo.png"
+                alt="NoTake Logo"
+                width={250}
+                height={250}
+                priority
+                className="w-auto h-auto max-w-md"
+              />
+            </div>
             <p className="text-2xl text-foreground">
               Prediction Market Analytics Dashboard
             </p>
