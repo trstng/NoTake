@@ -3,7 +3,7 @@ import './globals.css'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://notake.io'),
   title: {
     default: 'NoTake - Prediction Market Analytics',
     template: '%s | NoTake',
@@ -28,6 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
+    url: 'https://notake.io',
     siteName: 'NoTake',
     title: 'NoTake - Prediction Market Analytics',
     description: 'Track and analyze your prediction market trades with real-time analytics. Compatible with Kalshi, Polymarket, and more.',
