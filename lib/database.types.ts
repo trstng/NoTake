@@ -55,6 +55,8 @@ export interface Database {
           platform: 'kalshi' | 'polymarket' | 'other'
           tags: string[] | null
           notes: string | null
+          transaction_hash: string | null
+          action: 'Buy' | 'Sell' | null
         }
         Insert: {
           id?: string
@@ -72,6 +74,8 @@ export interface Database {
           platform?: 'kalshi' | 'polymarket' | 'other'
           tags?: string[] | null
           notes?: string | null
+          transaction_hash?: string | null
+          action?: 'Buy' | 'Sell' | null
         }
         Update: {
           id?: string
@@ -89,6 +93,8 @@ export interface Database {
           platform?: 'kalshi' | 'polymarket' | 'other'
           tags?: string[] | null
           notes?: string | null
+          transaction_hash?: string | null
+          action?: 'Buy' | 'Sell' | null
         }
       }
       positions: {

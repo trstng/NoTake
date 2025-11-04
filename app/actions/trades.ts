@@ -18,6 +18,16 @@ interface KalshiCSVRow {
   Order_Type: 'Maker' | 'Taker'
 }
 
+interface PolymarketCSVRow {
+  marketName: string
+  action: 'Buy' | 'Sell' | 'Deposit'
+  usdcAmount: string
+  tokenAmount: string
+  tokenName: string // 'Yes', 'No', or 'USDC' for deposits
+  timestamp: string // Unix timestamp in seconds
+  hash: string
+}
+
 interface ImportResult {
   success: boolean
   count?: number
@@ -153,6 +163,150 @@ export async function importTrades(csvRows: KalshiCSVRow[]): Promise<ImportResul
     return {
       success: false,
       error: err.message || 'Unknown error occurred during import',
+    }
+  }
+}
+
+export async function importPolymarketTrades(csvRows: PolymarketCSVRow[]): Promise<ImportResult> {
+  try {
+    const supabase = await createClient()
+
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return {
+        success: false,
+        error: 'Not authenticated. Please log in and try again.',
+      }
+    }
+
+    // Filter out deposits and map to database format
+    const validRows = csvRows.filter(row => row.action !== 'Deposit' && (row.tokenName === 'Yes' || row.tokenName === 'No'))
+
+    const trades: TradeInsert[] = validRows.map((row) => {
+      const usdcAmount = parseFloat(row.usdcAmount)
+      const tokenAmount = parseFloat(row.tokenAmount)
+
+      // Calculate price in cents: (usdcAmount / tokenAmount) * 100
+      const priceCents = Math.round((usdcAmount / tokenAmount) * 100)
+
+      // Round contracts to nearest integer
+      const contracts = Math.round(tokenAmount)
+
+      // Convert Unix timestamp (seconds) to ISO8601 string
+      const timestamp = new Date(parseInt(row.timestamp) * 1000).toISOString()
+
+      return {
+        user_id: user.id,
+        timestamp,
+        market_ticker: row.marketName, // Use market name as ticker since Polymarket doesn't have tickers
+        market_id: null, // Polymarket doesn't have traditional market UUIDs
+        market_name: row.marketName,
+        direction: row.tokenName as 'Yes' | 'No',
+        price_cents: priceCents,
+        amount_contracts: contracts,
+        fee_dollars: 0, // Polymarket CSV doesn't separate fees
+        order_type: null, // Polymarket CSV doesn't include order type
+        platform: 'polymarket',
+        tags: [],
+        notes: null,
+        transaction_hash: row.hash, // Store blockchain transaction hash
+        action: row.action as 'Buy' | 'Sell', // Store Buy/Sell action
+      }
+    })
+
+    if (trades.length === 0) {
+      return {
+        success: true,
+        count: 0,
+        message: 'No valid trades found in CSV (deposits and invalid rows filtered out)',
+      }
+    }
+
+    // Check for duplicates using transaction hash (unique identifier for Polymarket)
+    const { data: existingTrades } = await supabase
+      .from('trades')
+      .select('transaction_hash')
+      .eq('user_id', user.id)
+      .eq('platform', 'polymarket')
+      .not('transaction_hash', 'is', null)
+
+    const existingHashes = new Set(
+      existingTrades?.map((t) => t.transaction_hash) || []
+    )
+
+    // Filter out duplicates based on transaction hash
+    const newTrades = trades.filter((trade) => {
+      return !existingHashes.has(trade.transaction_hash)
+    })
+
+    if (newTrades.length === 0) {
+      return {
+        success: true,
+        count: 0,
+        duplicates: trades.length,
+      }
+    }
+
+    // Insert trades in batches
+    const batchSize = 100
+    let insertedCount = 0
+    const errors: string[] = []
+
+    for (let i = 0; i < newTrades.length; i += batchSize) {
+      const batch = newTrades.slice(i, i + batchSize)
+
+      const { error: insertError } = await supabase
+        .from('trades')
+        .insert(batch)
+
+      if (insertError) {
+        errors.push(`Batch ${i / batchSize + 1}: ${insertError.message}`)
+      } else {
+        insertedCount += batch.length
+      }
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        error: `Partial import failed. ${insertedCount} trades imported. Errors: ${errors.join('; ')}`,
+        count: insertedCount,
+      }
+    }
+
+    // Calculate positions after successful import
+    const positionResult = await calculatePositions(user.id)
+
+    // Update daily stats after positions are calculated (with $0 starting capital)
+    const statsResult = await updateDailyStats(user.id, 0)
+
+    let message = `Imported ${insertedCount} Polymarket trade${insertedCount !== 1 ? 's' : ''}`
+    if (trades.length - newTrades.length > 0) {
+      message += ` (${trades.length - newTrades.length} duplicate${trades.length - newTrades.length !== 1 ? 's' : ''} skipped)`
+    }
+    if (positionResult.success && positionResult.count && positionResult.count > 0) {
+      message += `. Calculated ${positionResult.count} position${positionResult.count !== 1 ? 's' : ''}`
+      if (positionResult.totalPnL !== undefined) {
+        message += ` with ${positionResult.totalPnL >= 0 ? '+' : ''}$${positionResult.totalPnL.toFixed(2)} P&L`
+      }
+    }
+    if (statsResult.success && statsResult.count && statsResult.count > 0) {
+      message += `. Updated ${statsResult.count} day${statsResult.count !== 1 ? 's' : ''} of stats`
+    }
+
+    return {
+      success: true,
+      count: insertedCount,
+      duplicates: trades.length - newTrades.length,
+      message,
+    }
+  } catch (err: any) {
+    console.error('Polymarket import error:', err)
+    return {
+      success: false,
+      error: err.message || 'Unknown error occurred during Polymarket import',
     }
   }
 }

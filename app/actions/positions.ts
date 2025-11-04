@@ -124,57 +124,84 @@ export async function calculatePositions(userId: string) {
       const fee = trade.fee_dollars
       const direction = trade.direction as 'Yes' | 'No'
       const timestamp = trade.timestamp
+      const action = trade.action as 'Buy' | 'Sell' | null
 
-      if (!positions[ticker]) {
-        positions[ticker] = new Position()
+      // For Polymarket, track Yes and No positions separately
+      // For Kalshi, use single ticker to track net position
+      const positionKey = action ? `${ticker}-${direction}` : ticker
+
+      if (!positions[positionKey]) {
+        positions[positionKey] = new Position()
       }
 
-      const pos = positions[ticker]
-      const netBefore = pos.netPosition()
+      const pos = positions[positionKey]
 
-      // Determine if this is opening or closing
-      if (direction === 'Yes') {
-        if (netBefore < 0) {
-          // Closing short position
-          const closeQty = Math.min(qty, Math.abs(netBefore))
-          if (closeQty > 0) {
-            pos.realize(closeQty, price, fee * (closeQty / qty), timestamp, direction)
-          }
-
-          // Open new long if qty remaining
-          const openQty = qty - closeQty
-          if (openQty > 0) {
-            pos.addFill(openQty, price, fee * (openQty / qty), timestamp, direction)
-          }
-        } else {
-          // Opening new long or adding to long
+      // Handle Polymarket trades (have action field)
+      if (action) {
+        if (action === 'Buy') {
+          // Buy = opening/adding to position in this direction
           pos.addFill(qty, price, fee, timestamp, direction)
+        } else {
+          // Sell = closing position in this direction
+          if (pos.layers.length > 0) {
+            pos.realize(qty, price, fee, timestamp, direction)
+          }
+          // If no layers to close, this could be a short sell - just add as a negative layer
+          // For now, we'll ignore sells with no position (shouldn't happen in real data)
         }
       } else {
-        // direction === 'No'
-        if (netBefore > 0) {
-          // Closing long position
-          const closeQty = Math.min(qty, netBefore)
-          if (closeQty > 0) {
-            pos.realize(closeQty, price, fee * (closeQty / qty), timestamp, direction)
-          }
+        // Handle Kalshi trades (no action field) - original logic
+        const netBefore = pos.netPosition()
 
-          // Open new short if qty remaining
-          const openQty = qty - closeQty
-          if (openQty > 0) {
-            pos.addFill(openQty, price, fee * (openQty / qty), timestamp, direction)
+        // Determine if this is opening or closing
+        if (direction === 'Yes') {
+          if (netBefore < 0) {
+            // Closing short position
+            const closeQty = Math.min(qty, Math.abs(netBefore))
+            if (closeQty > 0) {
+              pos.realize(closeQty, price, fee * (closeQty / qty), timestamp, direction)
+            }
+
+            // Open new long if qty remaining
+            const openQty = qty - closeQty
+            if (openQty > 0) {
+              pos.addFill(openQty, price, fee * (openQty / qty), timestamp, direction)
+            }
+          } else {
+            // Opening new long or adding to long
+            pos.addFill(qty, price, fee, timestamp, direction)
           }
         } else {
-          // Opening new short or adding to short
-          pos.addFill(qty, price, fee, timestamp, direction)
+          // direction === 'No'
+          if (netBefore > 0) {
+            // Closing long position
+            const closeQty = Math.min(qty, netBefore)
+            if (closeQty > 0) {
+              pos.realize(closeQty, price, fee * (closeQty / qty), timestamp, direction)
+            }
+
+            // Open new short if qty remaining
+            const openQty = qty - closeQty
+            if (openQty > 0) {
+              pos.addFill(openQty, price, fee * (openQty / qty), timestamp, direction)
+            }
+          } else {
+            // Opening new short or adding to short
+            pos.addFill(qty, price, fee, timestamp, direction)
+          }
         }
       }
     }
 
     // Collect all closed realizations
     const allRealizations: PositionInsert[] = []
-    for (const [ticker, pos] of Object.entries(positions)) {
+    for (const [positionKey, pos] of Object.entries(positions)) {
       for (const r of pos.realizations) {
+        // Extract ticker from position key (remove -Yes or -No suffix for Polymarket)
+        const ticker = positionKey.includes('-Yes') || positionKey.includes('-No')
+          ? positionKey.substring(0, positionKey.lastIndexOf('-'))
+          : positionKey
+
         allRealizations.push({
           user_id: userId,
           market_ticker: ticker,
