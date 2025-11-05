@@ -10,6 +10,7 @@ import {
   List,
   Settings,
   TrendingUp,
+  FileText,
 } from 'lucide-react'
 
 const navigation = [
@@ -27,6 +28,11 @@ const navigation = [
     name: 'Analytics',
     href: '/dashboard/analytics',
     icon: LineChart,
+  },
+  {
+    name: 'Reports',
+    href: '/dashboard/reports',
+    icon: FileText,
   },
   {
     name: 'Markets',

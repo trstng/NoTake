@@ -17,6 +17,7 @@ export interface DashboardData {
   avgHoldTime: ReturnType<typeof calculateAverageHoldTime>
   dailyStats: DailyStat[]
   recentPositions: Position[]
+  allPositions: Position[]
   activePositionsCount: number
 }
 
@@ -85,6 +86,7 @@ export async function getDashboardData(): Promise<{ data: DashboardData | null; 
         avgHoldTime,
         dailyStats: dailyStats || [],
         recentPositions,
+        allPositions: closedPositions || [],
         activePositionsCount: activeCount || 0,
       },
       error: null,

@@ -29,7 +29,7 @@ export default async function DashboardPage() {
     )
   }
 
-  const { performance, dailyStats, recentPositions, activePositionsCount } = data
+  const { performance, dailyStats, recentPositions, allPositions, drawdown, avgHoldTime, activePositionsCount } = data
 
   const hasData = performance.totalTrades > 0
 
@@ -123,21 +123,22 @@ export default async function DashboardPage() {
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
               {/* P/L Curve */}
-              <div className="lg:col-span-2">
-                <Card className="p-6 bg-card/80 backdrop-blur-sm border-border/50 shadow-[var(--shadow-soft)]">
-                  <h2 className="text-xl font-semibold mb-4 text-foreground">Profit/Loss Curve</h2>
-                  <PLCurveChart dailyStats={dailyStats} />
-                </Card>
-              </div>
+              <Card className="lg:col-span-2 p-6 bg-card/80 backdrop-blur-sm border-border/50 shadow-[var(--shadow-soft)]">
+                <h2 className="text-xl font-semibold mb-4 text-foreground">Profit/Loss Curve</h2>
+                <PLCurveChart dailyStats={dailyStats} />
+              </Card>
 
               {/* Trading Calendar */}
-              <div className="lg:col-span-1">
-                <TradingCalendar dailyStats={dailyStats} />
-              </div>
+              <TradingCalendar dailyStats={dailyStats} />
             </div>
 
             {/* Analytics Grid */}
-            <AnalyticsGrid />
+            <AnalyticsGrid
+              positions={allPositions}
+              performance={performance}
+              drawdown={drawdown}
+              avgHoldTime={avgHoldTime}
+            />
 
             {/* Recent Closed Positions */}
             <div className="mt-6">

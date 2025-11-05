@@ -2,9 +2,33 @@
 
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Database } from '@/lib/database.types';
+import { PerformanceMetrics, DrawdownMetrics } from '@/lib/analytics/performance';
 
-export const AnalyticsGrid = () => {
-  // Mock MFE/MAE data
+type Position = Database['public']['Tables']['positions']['Row']
+
+interface AnalyticsGridProps {
+  positions: Position[]
+  performance: PerformanceMetrics
+  drawdown: DrawdownMetrics
+  avgHoldTime: {
+    hours: number
+    days: number
+    formatted: string
+  }
+}
+
+export const AnalyticsGrid = ({ positions, performance, drawdown, avgHoldTime }: AnalyticsGridProps) => {
+  // Calculate win/loss counts from positions
+  const winners = positions.filter((p) => (p.pnl || 0) > 0)
+  const losers = positions.filter((p) => (p.pnl || 0) <= 0)
+
+  const winLossData = [
+    { type: 'Wins', value: winners.length, fill: 'hsl(var(--success))' },
+    { type: 'Losses', value: losers.length, fill: 'hsl(var(--destructive))' },
+  ];
+
+  // Mock MFE/MAE data (placeholder until we have historical price data)
   const mfeData = [
     { range: '0-5%', count: 12 },
     { range: '5-10%', count: 24 },
@@ -19,11 +43,6 @@ export const AnalyticsGrid = () => {
     { range: '10-15%', count: 14 },
     { range: '15-20%', count: 6 },
     { range: '20%+', count: 3 },
-  ];
-
-  const winLossData = [
-    { type: 'Wins', value: 101, fill: 'hsl(var(--success))' },
-    { type: 'Losses', value: 55, fill: 'hsl(var(--destructive))' },
   ];
 
   return (
@@ -130,11 +149,11 @@ export const AnalyticsGrid = () => {
         </ResponsiveContainer>
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div>
-            <p className="text-2xl font-bold text-success">101</p>
+            <p className="text-2xl font-bold text-success">{winners.length}</p>
             <p className="text-sm text-muted-foreground">Winning trades</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-destructive">55</p>
+            <p className="text-2xl font-bold text-destructive">{losers.length}</p>
             <p className="text-sm text-muted-foreground">Losing trades</p>
           </div>
         </div>
@@ -146,23 +165,31 @@ export const AnalyticsGrid = () => {
         <div className="space-y-4">
           <div className="flex justify-between items-center pb-3 border-b border-border/50">
             <span className="text-sm text-muted-foreground">Profit Factor</span>
-            <span className="text-lg font-semibold text-foreground">2.34</span>
-          </div>
-          <div className="flex justify-between items-center pb-3 border-b border-border/50">
-            <span className="text-sm text-muted-foreground">Sharpe Ratio</span>
-            <span className="text-lg font-semibold text-foreground">1.87</span>
+            <span className="text-lg font-semibold text-foreground">
+              {performance.profitFactor === Infinity ? '∞' : performance.profitFactor.toFixed(2)}
+            </span>
           </div>
           <div className="flex justify-between items-center pb-3 border-b border-border/50">
             <span className="text-sm text-muted-foreground">Max Drawdown</span>
-            <span className="text-lg font-semibold text-destructive">-12.3%</span>
+            <span className="text-lg font-semibold text-destructive">
+              {drawdown.maxDrawdownPercent > 0 ? '-' : ''}{drawdown.maxDrawdownPercent.toFixed(1)}%
+            </span>
           </div>
           <div className="flex justify-between items-center pb-3 border-b border-border/50">
             <span className="text-sm text-muted-foreground">Avg Hold Time</span>
-            <span className="text-lg font-semibold text-foreground">3.2 days</span>
+            <span className="text-lg font-semibold text-foreground">{avgHoldTime.formatted}</span>
+          </div>
+          <div className="flex justify-between items-center pb-3 border-b border-border/50">
+            <span className="text-sm text-muted-foreground">Best Trade</span>
+            <span className="text-lg font-semibold text-success">
+              +${performance.largestWin.toFixed(2)}
+            </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Best Trade</span>
-            <span className="text-lg font-semibold text-success">+$453.20</span>
+            <span className="text-sm text-muted-foreground">Worst Trade</span>
+            <span className="text-lg font-semibold text-destructive">
+              ${performance.largestLoss.toFixed(2)}
+            </span>
           </div>
         </div>
       </Card>
