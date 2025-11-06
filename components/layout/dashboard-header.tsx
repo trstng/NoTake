@@ -7,6 +7,7 @@ import { LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { CSVImportDialog } from '@/components/import/csv-import-dialog'
+import { SettlementImportDialog } from '@/components/import/settlement-import-dialog'
 import { ThemeToggle } from '@/components/theme-toggle'
 
 interface DashboardHeaderProps {
@@ -36,6 +37,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
       <div className="flex items-center gap-2">
         <CSVImportDialog />
+        <SettlementImportDialog />
         <ThemeToggle />
         <Button
           variant="ghost"

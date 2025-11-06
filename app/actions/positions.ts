@@ -5,6 +5,7 @@ import { Database } from '@/lib/database.types'
 
 type Trade = Database['public']['Tables']['trades']['Row']
 type PositionInsert = Database['public']['Tables']['positions']['Insert']
+type Settlement = Database['public']['Tables']['settlements']['Row']
 
 interface PositionLayer {
   qty: number
@@ -24,6 +25,8 @@ interface Realization {
   fees: number
   entry_timestamp: string
   exit_timestamp: string
+  settled_by_id?: string
+  settlement_result?: 'yes' | 'no'
 }
 
 class Position {
@@ -96,6 +99,57 @@ class Position {
     }
     return net
   }
+
+  // Close all remaining layers with settlement result
+  settlePosition(result: 'yes' | 'no', settlementDate: string, settlementId?: string): Realization[] {
+    const settlementRealizations: Realization[] = []
+
+    // Process all remaining layers
+    while (this.layers.length > 0) {
+      const layer = this.layers[0]
+
+      // Determine exit price based on settlement result and position direction
+      // If Yes won (result = 'yes'), Yes contracts pay $1.00, No contracts pay $0.00
+      // If No won (result = 'no'), No contracts pay $1.00, Yes contracts pay $0.00
+      let exitPrice: number
+      if (result === 'yes') {
+        exitPrice = layer.direction === 'Yes' ? 100 : 0 // 100 cents = $1.00
+      } else {
+        exitPrice = layer.direction === 'No' ? 100 : 0
+      }
+
+      // Calculate P&L
+      let pnl: number
+      if (layer.direction === 'Yes') {
+        pnl = layer.qty * (exitPrice - layer.price) / 100
+      } else {
+        pnl = layer.qty * (layer.price - exitPrice) / 100
+      }
+
+      // Subtract entry fee (no exit fee for settlements)
+      pnl -= layer.fee
+
+      settlementRealizations.push({
+        qty: layer.qty,
+        entry_price: layer.price,
+        exit_price: exitPrice,
+        entry_direction: layer.direction,
+        exit_direction: layer.direction, // Settlement doesn't have opposite direction
+        pnl: pnl,
+        fees: layer.fee,
+        entry_timestamp: layer.timestamp,
+        exit_timestamp: settlementDate,
+        settled_by_id: settlementId,
+        settlement_result: result,
+      })
+
+      // Remove layer
+      this.layers.shift()
+    }
+
+    this.realizations.push(...settlementRealizations)
+    return settlementRealizations
+  }
 }
 
 export async function calculatePositions(userId: string) {
@@ -110,14 +164,15 @@ export async function calculatePositions(userId: string) {
       .order('timestamp', { ascending: true })
 
     if (tradesError) throw tradesError
-    if (!trades || trades.length === 0) {
-      return { success: true, count: 0, message: 'No trades to process' }
-    }
 
     // Track positions per market
     const positions: Record<string, Position> = {}
 
-    for (const trade of trades) {
+    // Process trades if they exist
+    if (trades && trades.length > 0) {
+      console.log(`Processing ${trades.length} trades for user`)
+
+      for (const trade of trades) {
       const ticker = trade.market_ticker
       const qty = trade.amount_contracts
       const price = trade.price_cents
@@ -191,6 +246,171 @@ export async function calculatePositions(userId: string) {
           }
         }
       }
+      } // Close for loop
+    } else {
+      console.log('No trades found, but will continue to process settlements')
+    }
+
+    // Fetch settlements for user to close open positions
+    const { data: settlements, error: settlementsError } = await supabase
+      .from('settlements')
+      .select('*')
+      .eq('user_id', userId)
+      .order('settlement_date', { ascending: true })
+
+    if (settlementsError) {
+      console.error('Error fetching settlements:', settlementsError)
+      // Continue without settlements - non-fatal
+    }
+
+    console.log(`Found ${settlements?.length || 0} settlements for user`)
+
+    // Process settlements to close open positions
+    const settledTickers = new Set<string>() // Track which tickers had matching positions
+    let standaloneCount = 0
+
+    if (settlements && settlements.length > 0) {
+      console.log('Phase A: Closing existing positions for settlements')
+      // Phase A: Close existing open positions
+      for (const settlement of settlements) {
+        const ticker = settlement.market_ticker
+        const result = settlement.result as 'yes' | 'no'
+        const settlementDate = settlement.settlement_date
+        let hadPosition = false
+
+        // For Kalshi (no action), check the single ticker position
+        if (positions[ticker]) {
+          positions[ticker].settlePosition(result, settlementDate, settlement.id)
+          hadPosition = true
+        }
+
+        // For Polymarket, check both Yes and No direction positions
+        const yesKey = `${ticker}-Yes`
+        const noKey = `${ticker}-No`
+        if (positions[yesKey]) {
+          positions[yesKey].settlePosition(result, settlementDate, settlement.id)
+          hadPosition = true
+        }
+        if (positions[noKey]) {
+          positions[noKey].settlePosition(result, settlementDate, settlement.id)
+          hadPosition = true
+        }
+
+        if (hadPosition) {
+          settledTickers.add(ticker)
+        }
+      }
+
+      // Phase B: Create closed positions from settlements with no matching trades
+      const standaloneSettlements = settlements.filter(s => !settledTickers.has(s.market_ticker))
+
+      console.log(`Phase B: Creating standalone positions`)
+      console.log(`Standalone settlements to process: ${standaloneSettlements.length}`)
+
+      for (const settlement of standaloneSettlements) {
+        console.log(`Processing settlement: ${settlement.market_ticker}`, {
+          yes_contracts: settlement.yes_contracts_owned,
+          no_contracts: settlement.no_contracts_owned,
+          result: settlement.result,
+          profit: settlement.profit_dollars
+        })
+        const yesContracts = settlement.yes_contracts_owned || 0
+        const noContracts = settlement.no_contracts_owned || 0
+        const netYes = yesContracts - noContracts
+
+        // Skip if no contracts owned
+        if (yesContracts === 0 && noContracts === 0) {
+          continue
+        }
+
+        const result = settlement.result as 'yes' | 'no'
+        const settlementDate = settlement.settlement_date
+
+        // Determine which side user held (net position)
+        let direction: 'Yes' | 'No'
+        let size: number
+        let entryPrice: number
+        let exitPrice: number
+        let hedgedPositionPnL: number | undefined = undefined
+
+        if (netYes > 0) {
+          // User held net Yes position
+          direction = 'Yes'
+          size = netYes
+          entryPrice = Math.round((settlement.yes_avg_price_cents || 0) * 100)
+          exitPrice = result === 'yes' ? 100 : 0
+        } else if (netYes < 0) {
+          // User held net No position
+          direction = 'No'
+          size = Math.abs(netYes)
+          entryPrice = Math.round((settlement.no_avg_price_cents || 0) * 100)
+          exitPrice = result === 'no' ? 100 : 0
+        } else {
+          // Perfectly hedged - equal Yes and No contracts
+          // Use Kalshi's profit_dollars for net P&L (accounts for both sides)
+          const hedgedPnL = settlement.profit_dollars || 0
+
+          console.log(`Hedged position detected: ${settlement.market_ticker} (${yesContracts} Yes, ${noContracts} No)`)
+
+          if (hedgedPnL === 0 && yesContracts === 0) {
+            console.log(`Skipping hedged position with no contracts and $0 P&L`)
+            continue
+          }
+
+          // Pick a side for display purposes (doesn't affect P&L calculation)
+          // Use Yes side by default
+          direction = 'Yes'
+          size = yesContracts
+          entryPrice = Math.round((settlement.yes_avg_price_cents || 0) * 100)
+          exitPrice = result === 'yes' ? 100 : 0
+
+          // Store Kalshi's P&L to use instead of calculating
+          hedgedPositionPnL = hedgedPnL
+        }
+
+        // Calculate P&L
+        let pnl: number
+        if (typeof hedgedPositionPnL !== 'undefined') {
+          // Use Kalshi's profit_dollars for hedged positions
+          pnl = hedgedPositionPnL
+          console.log(`Using Kalshi's hedged P&L: $${pnl.toFixed(2)}`)
+        } else {
+          // Calculate from entry/exit prices for net positions
+          pnl = size * (exitPrice - entryPrice) / 100
+          console.log(`Calculated P&L for ${direction} ${size} contracts: $${pnl.toFixed(2)} (entry: ${entryPrice}¢, exit: ${exitPrice}¢)`)
+        }
+
+        // Entry time: approximate as settlement date (we don't have actual entry time)
+        // This is acceptable since we're creating a closed position
+        const entryTimestamp = settlementDate
+        const exitTimestamp = settlementDate
+
+        // Add to positions map as a realized position
+        const settlementKey = `settlement-${settlement.market_ticker}`
+        if (!positions[settlementKey]) {
+          positions[settlementKey] = new Position()
+        }
+
+        // Create a realization directly
+        positions[settlementKey].realizations.push({
+          qty: size,
+          entry_price: entryPrice,
+          exit_price: exitPrice,
+          entry_direction: direction,
+          exit_direction: direction,
+          pnl: pnl,
+          fees: 0, // Fees already included in profit_dollars
+          entry_timestamp: entryTimestamp,
+          exit_timestamp: exitTimestamp,
+          settled_by_id: settlement.id,
+          settlement_result: result,
+        })
+
+        standaloneCount++
+        console.log(`Created standalone position for ${settlement.market_ticker}: ${direction} ${size} contracts, P&L: $${pnl}`)
+      }
+
+      console.log(`Phase B complete: Created ${standaloneCount} standalone positions`)
     }
 
     // Collect all closed realizations
@@ -214,11 +434,16 @@ export async function calculatePositions(userId: string) {
           entry_time: new Date(r.entry_timestamp).getTime(), // Unix ms
           exit_time: new Date(r.exit_timestamp).getTime(), // Unix ms
           status: 'closed',
+          settled_by_id: r.settled_by_id || null,
+          settlement_result: r.settlement_result || null,
         })
       }
     }
 
+    console.log(`Total realizations collected: ${allRealizations.length}`)
+
     if (allRealizations.length === 0) {
+      console.log('No closed positions to insert')
       return { success: true, count: 0, message: 'No closed positions yet' }
     }
 
@@ -240,6 +465,8 @@ export async function calculatePositions(userId: string) {
       const key = `${pos.market_ticker}-${pos.entry_time}-${pos.exit_time}`
       return !existingSet.has(key)
     })
+
+    console.log(`After deduplication: ${newPositions.length} new positions to insert`)
 
     if (newPositions.length === 0) {
       return {
@@ -266,14 +493,22 @@ export async function calculatePositions(userId: string) {
       inserted += batch.length
     }
 
+    console.log(`Successfully inserted ${inserted} positions into database`)
+
     const totalPnL = allRealizations.reduce((sum, p) => sum + (p.pnl || 0), 0)
+
+    const message = standaloneCount > 0
+      ? `Calculated ${inserted} new positions (${standaloneCount} from settlements) with total P&L of $${totalPnL.toFixed(2)}`
+      : `Calculated ${inserted} new positions with total P&L of $${totalPnL.toFixed(2)}`
+
+    console.log(message)
 
     return {
       success: true,
       count: inserted,
       duplicates: allRealizations.length - inserted,
       totalPnL: Math.round(totalPnL * 100) / 100,
-      message: `Calculated ${inserted} new positions with total P&L of $${totalPnL.toFixed(2)}`,
+      message,
     }
   } catch (error) {
     console.error('Error calculating positions:', error)
