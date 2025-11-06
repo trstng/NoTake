@@ -217,8 +217,8 @@ export function SettlementImportDialog() {
               <ol className="list-decimal list-inside pl-2 space-y-1">
                 <li>Log into Kalshi</li>
                 <li>Go to Portfolio → Activity</li>
-                <li>Filter by "Settlements" (not Trades)</li>
-                <li>Click "Export" and download Settlement CSV</li>
+                <li>Filter by &ldquo;Settlements&rdquo; (not Trades)</li>
+                <li>Click &ldquo;Export&rdquo; and download Settlement CSV</li>
                 <li>Upload the file here</li>
               </ol>
               <p className="pt-2 text-blue-500">

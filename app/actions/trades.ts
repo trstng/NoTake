@@ -1,9 +1,11 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import type { TradeInsert } from '@/lib/database.types'
+import type { TablesInsert } from '@/lib/database.types'
 import { calculatePositions } from './positions'
 import { updateDailyStats } from './stats'
+
+type TradeInsert = TablesInsert<'trades'>
 
 interface KalshiCSVRow {
   type: string
