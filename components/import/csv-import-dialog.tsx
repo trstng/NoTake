@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Papa from 'papaparse'
 import {
   Dialog,
@@ -12,9 +12,11 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Upload, FileText, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Upload, FileText, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
 import { importTrades, importPolymarketTrades } from '@/app/actions/trades'
+import { processNextBatch, getJobStatus } from '@/app/actions/positions'
 import { useRouter } from 'next/navigation'
 
 // Kalshi CSV format
@@ -65,6 +67,12 @@ export function CSVImportDialog() {
   const [preview, setPreview] = useState<TradePreview[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Progress tracking state
+  const [jobId, setJobId] = useState<string | null>(null)
+  const [processing, setProcessing] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [progressMessage, setProgressMessage] = useState('')
+
   const parseKalshiRow = (row: KalshiCSVRow): TradePreview | null => {
     try {
       const amount = parseFloat(row.Amount_In_Dollars.replace(/,/g, ''))
@@ -105,6 +113,67 @@ export function CSVImportDialog() {
       return null
     }
   }
+
+  // Process batches when a job is created
+  useEffect(() => {
+    if (!jobId) return
+
+    const processBatches = async () => {
+      setProcessing(true)
+
+      try {
+        let isComplete = false
+
+        while (!isComplete) {
+          const result = await processNextBatch(jobId)
+
+          if (!result.success) {
+            setError(result.error || 'Position calculation failed')
+            setProcessing(false)
+            return
+          }
+
+          // Update progress
+          if (result.total && result.processed !== undefined) {
+            const percent = Math.round((result.processed / result.total) * 100)
+            setProgress(percent)
+            setProgressMessage(`Processing trades: ${result.processed} / ${result.total}`)
+          }
+
+          isComplete = result.completed
+
+          // Small delay to avoid hammering the server
+          if (!isComplete) {
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+        }
+
+        // Processing complete
+        setProcessing(false)
+        setProgressMessage('Position calculation complete!')
+        setSuccess(true)
+        router.refresh()
+
+        // Close dialog after a delay
+        setTimeout(() => {
+          setOpen(false)
+          setFile(null)
+          setPreview([])
+          setSuccess(false)
+          setSuccessMessage('')
+          setJobId(null)
+          setProgress(0)
+          setProgressMessage('')
+        }, 2000)
+
+      } catch (err: any) {
+        setError(err.message || 'An error occurred during processing')
+        setProcessing(false)
+      }
+    }
+
+    processBatches()
+  }, [jobId, router])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0]
@@ -184,17 +253,23 @@ export function CSVImportDialog() {
 
             const message = result.message || `Successfully imported ${result.count} trade${result.count !== 1 ? 's' : ''}`
             setSuccessMessage(message)
-            setSuccess(true)
             setImporting(false)
-            router.refresh()
 
-            setTimeout(() => {
-              setOpen(false)
-              setFile(null)
-              setPreview([])
-              setSuccess(false)
-              setSuccessMessage('')
-            }, 3000)
+            // Start batch processing if we have a jobId
+            if (result.jobId) {
+              setJobId(result.jobId)
+            } else {
+              // No job created, just show success
+              setSuccess(true)
+              router.refresh()
+              setTimeout(() => {
+                setOpen(false)
+                setFile(null)
+                setPreview([])
+                setSuccess(false)
+                setSuccessMessage('')
+              }, 3000)
+            }
           } else {
             // Polymarket import
             const rows = results.data as PolymarketCSVRow[]
@@ -218,17 +293,23 @@ export function CSVImportDialog() {
 
             const message = result.message || `Successfully imported ${result.count} trade${result.count !== 1 ? 's' : ''}`
             setSuccessMessage(message)
-            setSuccess(true)
             setImporting(false)
-            router.refresh()
 
-            setTimeout(() => {
-              setOpen(false)
-              setFile(null)
-              setPreview([])
-              setSuccess(false)
-              setSuccessMessage('')
-            }, 3000)
+            // Start batch processing if we have a jobId
+            if (result.jobId) {
+              setJobId(result.jobId)
+            } else {
+              // No job created, just show success
+              setSuccess(true)
+              router.refresh()
+              setTimeout(() => {
+                setOpen(false)
+                setFile(null)
+                setPreview([])
+                setSuccess(false)
+                setSuccessMessage('')
+              }, 3000)
+            }
           }
         },
         error: (err) => {
@@ -450,7 +531,7 @@ export function CSVImportDialog() {
         )}
 
         {/* Success Message */}
-        {success && (
+        {success && !processing && (
           <div className="flex items-center gap-2 p-3 bg-success/10 border border-success/30 rounded-lg">
             <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
             <p className="text-sm text-success">
@@ -459,20 +540,40 @@ export function CSVImportDialog() {
           </div>
         )}
 
+        {/* Processing Progress */}
+        {processing && (
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">
+                    {progressMessage || 'Calculating positions...'}
+                  </p>
+                  <Progress value={progress} className="mt-2" />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {progress}% complete
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Action Buttons */}
         <div className="flex justify-end gap-2">
           <Button
             variant="ghost"
             onClick={() => setOpen(false)}
-            disabled={importing}
+            disabled={importing || processing}
           >
             Cancel
           </Button>
           <Button
             onClick={handleImport}
-            disabled={!file || importing || success}
+            disabled={!file || importing || processing || success}
           >
-            {importing ? 'Importing...' : 'Import Trades'}
+            {importing ? 'Importing...' : processing ? 'Processing...' : 'Import Trades'}
           </Button>
         </div>
       </DialogContent>

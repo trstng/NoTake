@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import type { TablesInsert } from '@/lib/database.types'
-import { calculatePositions } from './positions'
+import { calculatePositions, createCalculationJob } from './positions'
 import { updateDailyStats } from './stats'
 
 type TradeInsert = TablesInsert<'trades'>
@@ -60,6 +60,7 @@ interface ImportResult {
   error?: string
   duplicates?: number
   message?: string
+  jobId?: string // Job ID for async position calculation
 }
 
 export async function importTrades(csvRows: KalshiCSVRow[]): Promise<ImportResult> {
@@ -79,6 +80,7 @@ export async function importTrades(csvRows: KalshiCSVRow[]): Promise<ImportResul
     // Transform CSV rows to database format
     const trades: TradeInsert[] = csvRows.map((row) => {
       const feeDollars = parseFloat(row.Fee_In_Dollars.replace(/,/g, ''))
+      // Store raw price from CSV - inversion happens in position calculation
       const priceCents = parseInt(row.Price_In_Cents)
 
       // Amount_In_Dollars is mislabeled by Kalshi - it's actually the contract count
@@ -154,31 +156,38 @@ export async function importTrades(csvRows: KalshiCSVRow[]): Promise<ImportResul
       }
     }
 
-    // Calculate positions after successful import
-    const positionResult = await calculatePositions(user.id)
+    // Count total trades for the user to create calculation job
+    const { count: totalTrades } = await supabase
+      .from('trades')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
 
-    // Update daily stats after positions are calculated (with $0 starting capital)
-    const statsResult = await updateDailyStats(user.id, 0)
+    // Create a calculation job for async position calculation
+    const jobResult = await createCalculationJob(user.id, totalTrades || 0, 500)
+
+    if (!jobResult.success) {
+      console.error('Failed to create calculation job:', jobResult.error)
+      // Still return success for trade import, but note the job creation failed
+      return {
+        success: true,
+        count: insertedCount,
+        duplicates: trades.length - newTrades.length,
+        message: `Imported ${insertedCount} trade${insertedCount !== 1 ? 's' : ''}, but failed to start position calculation. Please try recalculating manually.`,
+      }
+    }
 
     let message = `Imported ${insertedCount} trade${insertedCount !== 1 ? 's' : ''}`
     if (trades.length - newTrades.length > 0) {
       message += ` (${trades.length - newTrades.length} duplicate${trades.length - newTrades.length !== 1 ? 's' : ''} skipped)`
     }
-    if (positionResult.success && positionResult.count && positionResult.count > 0) {
-      message += `. Calculated ${positionResult.count} position${positionResult.count !== 1 ? 's' : ''}`
-      if (positionResult.totalPnL !== undefined) {
-        message += ` with ${positionResult.totalPnL >= 0 ? '+' : ''}$${positionResult.totalPnL.toFixed(2)} P&L`
-      }
-    }
-    if (statsResult.success && statsResult.count && statsResult.count > 0) {
-      message += `. Updated ${statsResult.count} day${statsResult.count !== 1 ? 's' : ''} of stats`
-    }
+    message += `. Position calculation started.`
 
     return {
       success: true,
       count: insertedCount,
       duplicates: trades.length - newTrades.length,
       message,
+      jobId: jobResult.jobId,
     }
   } catch (err: any) {
     console.error('Import error:', err)
@@ -298,31 +307,38 @@ export async function importPolymarketTrades(csvRows: PolymarketCSVRow[]): Promi
       }
     }
 
-    // Calculate positions after successful import
-    const positionResult = await calculatePositions(user.id)
+    // Count total trades for the user to create calculation job
+    const { count: totalTrades } = await supabase
+      .from('trades')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
 
-    // Update daily stats after positions are calculated (with $0 starting capital)
-    const statsResult = await updateDailyStats(user.id, 0)
+    // Create a calculation job for async position calculation
+    const jobResult = await createCalculationJob(user.id, totalTrades || 0, 500)
+
+    if (!jobResult.success) {
+      console.error('Failed to create calculation job:', jobResult.error)
+      // Still return success for trade import, but note the job creation failed
+      return {
+        success: true,
+        count: insertedCount,
+        duplicates: trades.length - newTrades.length,
+        message: `Imported ${insertedCount} Polymarket trade${insertedCount !== 1 ? 's' : ''}, but failed to start position calculation. Please try recalculating manually.`,
+      }
+    }
 
     let message = `Imported ${insertedCount} Polymarket trade${insertedCount !== 1 ? 's' : ''}`
     if (trades.length - newTrades.length > 0) {
       message += ` (${trades.length - newTrades.length} duplicate${trades.length - newTrades.length !== 1 ? 's' : ''} skipped)`
     }
-    if (positionResult.success && positionResult.count && positionResult.count > 0) {
-      message += `. Calculated ${positionResult.count} position${positionResult.count !== 1 ? 's' : ''}`
-      if (positionResult.totalPnL !== undefined) {
-        message += ` with ${positionResult.totalPnL >= 0 ? '+' : ''}$${positionResult.totalPnL.toFixed(2)} P&L`
-      }
-    }
-    if (statsResult.success && statsResult.count && statsResult.count > 0) {
-      message += `. Updated ${statsResult.count} day${statsResult.count !== 1 ? 's' : ''} of stats`
-    }
+    message += `. Position calculation started.`
 
     return {
       success: true,
       count: insertedCount,
       duplicates: trades.length - newTrades.length,
       message,
+      jobId: jobResult.jobId,
     }
   } catch (err: any) {
     console.error('Polymarket import error:', err)
