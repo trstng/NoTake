@@ -74,6 +74,7 @@ export type Database = {
           exit_time: number | null
           fees: number
           id: string
+          layers: Json | null
           market_id: string | null
           market_name: string | null
           market_ticker: string
@@ -96,6 +97,7 @@ export type Database = {
           exit_time?: number | null
           fees?: number
           id?: string
+          layers?: Json | null
           market_id?: string | null
           market_name?: string | null
           market_ticker: string
@@ -118,6 +120,7 @@ export type Database = {
           exit_time?: number | null
           fees?: number
           id?: string
+          layers?: Json | null
           market_id?: string | null
           market_name?: string | null
           market_ticker?: string
